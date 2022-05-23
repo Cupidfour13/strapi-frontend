@@ -1,0 +1,43 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ Development ]
+  pull_request:
+    branches: [ Development ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set env to Development
+      if: endsWith(github.ref, '/Development')
+      run: |
+        echo $ENV_DEV | base64 --decode > .env
+
+    - name: Set env to Stage
+      if: endsWith(github.ref, '/Stage')
+      run: |
+        echo $ENV_STAGE | base64 --decode > .env
+
+    - name: Set env to Production
+      if: endsWith(github.ref, '/Production')
+      run: |
+        echo $ENV_PROD | base64 --decode > .env
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: mkdir -p ./.vercel
+    - run: echo "${{secrets.VERCEL_PROJECT_JSON}}" > ./.vercel/project.json
+    - run: echo ${{secrets.ENV_STRAPI_API_URL_ENTRY}} >> .env
+    - run: npm install vercel -g
+    - run: vercel -t ${{secrets.VERCEL_TOKEN}}
